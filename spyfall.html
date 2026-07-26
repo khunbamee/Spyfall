@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#a0001c">
+  <title>Chula Spyfall</title>
+  <style>
+    :root{--red:#a0001c;--dark:#720014;--soft:#f8e9ed;--text:#191919;--muted:#6b6b6b;--line:#ead3d9}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Thai",Arial,sans-serif;background:#fff;color:var(--text)}
+    body{min-height:100dvh}
+    button,input{font:inherit}
+    button{touch-action:manipulation}
+    .app{min-height:100dvh;display:flex;flex-direction:column;background:radial-gradient(circle at top right,rgba(160,0,28,.08),transparent 35%),#fff}
+    header{display:flex;justify-content:space-between;align-items:center;padding:calc(16px + env(safe-area-inset-top)) 20px 8px}
+    .brand{color:var(--red);font-weight:900;letter-spacing:.03em}
+    .count{font-size:.9rem;color:var(--muted)}
+    main{flex:1;display:flex;align-items:center;justify-content:center;padding:18px}
+    .screen{display:none;width:100%;max-width:520px;text-align:center}
+    .screen.active{display:block}
+    .card{border:1px solid var(--line);border-radius:26px;padding:26px;background:#fff;box-shadow:0 14px 45px rgba(80,0,14,.08)}
+    h1{font-size:clamp(2.1rem,10vw,4rem);line-height:1;margin:0 0 14px}
+    h2{font-size:clamp(2rem,10vw,4.2rem);line-height:1;margin:0 0 12px}
+    p{line-height:1.5}
+    .sub{color:var(--muted);margin:0 0 24px}
+    label{display:block;text-align:left;font-weight:800;font-size:.95rem;margin-bottom:8px}
+    input{width:100%;border:1px solid var(--line);border-radius:16px;padding:15px 16px;font-size:1.15rem;background:#fff}
+    input:focus{outline:3px solid var(--soft);border-color:var(--red)}
+    .help{text-align:left;font-size:.88rem;color:var(--muted);margin:9px 0 20px}
+    .btn{display:block;width:100%;border:0;border-radius:16px;padding:16px 18px;font-weight:900;cursor:pointer}
+    .primary{background:var(--red);color:#fff}
+    .primary:active{background:var(--dark)}
+    .secondary{background:var(--soft);color:var(--red);margin-top:14px}
+    .playerNo{font-size:clamp(4.8rem,25vw,8.5rem);line-height:.9;color:var(--red);font-weight:950;margin:10px 0 26px}
+    .hint{color:var(--muted);margin:0}
+    .arrow{font-size:2rem;color:var(--red);margin:10px 0;animation:nudge 1.1s ease-in-out infinite}
+    @keyframes nudge{50%{transform:translateX(8px)}}
+    .roleCard{min-height:330px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:26px;padding:25px;background:#fff}
+    .eyebrow{text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-size:.82rem;margin-bottom:14px}
+    .role{font-size:clamp(2rem,9vw,4rem);line-height:1.08;color:var(--red);font-weight:950;overflow-wrap:anywhere}
+    .note{color:var(--muted);margin:18px 0 0}
+    .tick{width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;font-size:2rem;font-weight:900;margin:0 auto 22px}
+    footer{padding:8px 18px calc(16px + env(safe-area-inset-bottom));text-align:center;color:var(--muted);font-size:.8rem}
+    .error{display:none;color:var(--red);font-size:.9rem;text-align:left;margin:10px 0 0}
+    @media(max-width:400px){.card,.roleCard{border-radius:22px;padding:21px}main{padding:14px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">CHULA SPYFALL</div>
+    <div id="counter" class="count"></div>
+  </header>
+
+  <main id="swipeArea">
+    <section id="setup" class="screen active">
+      <div class="card">
+        <h1>Find the spies.</h1>
+        <p class="sub">Enter the number of players, then pass the phone around.</p>
+        <label for="players">Number of players</label>
+        <input id="players" type="number" min="3" max="30" value="10" inputmode="numeric" pattern="[0-9]*">
+        <div id="rule" class="help">6 or more players = 2 spies</div>
+        <button id="start" class="btn primary" type="button">Start game</button>
+        <div id="error" class="error">Please enter a whole number from 3 to 30.</div>
+      </div>
+    </section>
+
+    <section id="player" class="screen">
+      <p class="sub">Only this player should look at the screen.</p>
+      <h2>Player</h2>
+      <div id="playerNo" class="playerNo">1</div>
+      <p class="hint">Swipe left to reveal your role</p>
+      <div class="arrow">→</div>
+      <button id="reveal" class="btn secondary" type="button">Tap to reveal</button>
+    </section>
+
+    <section id="roleScreen" class="screen">
+      <div class="roleCard">
+        <div>
+          <div id="roleLabel" class="eyebrow">Your location</div>
+          <div id="roleWord" class="role"></div>
+          <p id="roleNote" class="note"></p>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:18px">Remember it, then swipe left and pass the phone</p>
+      <button id="next" class="btn secondary" type="button">Next player</button>
+    </section>
+
+    <section id="done" class="screen">
+      <div class="card">
+        <div class="tick">✓</div>
+        <h1>Everyone is ready.</h1>
+        <p class="sub">Start asking questions and find the spies.</p>
+        <button id="again" class="btn primary" type="button">Play again</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>Works with swipe or buttons.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var locations = [
+    "Taco Bell Samyan Mitrtown",
+    "MBK Center SF Cinema",
+    "Intania Canteen",
+    "Larn Gear",
+    "CO-OP Samyan Mitrtown (ที่อ่านหนังสือ)",
+    "Louis Vuitton Siam Paragon",
+    "CU Sports Complex",
+    "Kinokuniya Siam Paragon (ร้านหนังสือ)",
+    "MRT Samyan Mitrtown Exit 2 (ออกไปจามจุรีสแควร์)",
+    "Joe Wings Siam Square (ร้านไก่ทอด)",
+    "เจ๊บึก (restaurant in Intania Canteen)",
+    "Intania's Parabola (ร้านไอติม)",
+    "ตึก 100 ชั้น 12 (สนามบอล วอลเลย์ ยิม จัดแข่ง)",
+    "Hogwarts",
+    "BBA CU"
+  ];
+
+  var setup = document.getElementById("setup");
+  var player = document.getElementById("player");
+  var roleScreen = document.getElementById("roleScreen");
+  var done = document.getElementById("done");
+  var playersInput = document.getElementById("players");
+  var rule = document.getElementById("rule");
+  var error = document.getElementById("error");
+  var playerNo = document.getElementById("playerNo");
+  var roleLabel = document.getElementById("roleLabel");
+  var roleWord = document.getElementById("roleWord");
+  var roleNote = document.getElementById("roleNote");
+  var counter = document.getElementById("counter");
+  var swipeArea = document.getElementById("swipeArea");
+
+  var roles = [];
+  var current = 0;
+  var total = 0;
+  var touchStartX = 0;
+  var touchStartY = 0;
+
+  function show(target) {
+    setup.className = "screen";
+    player.className = "screen";
+    roleScreen.className = "screen";
+    done.className = "screen";
+    target.className = "screen active";
+  }
+
+  function updateRule() {
+    var n = parseInt(playersInput.value, 10) || 0;
+    rule.textContent = n < 6 ? "Fewer than 6 players = 1 spy" : "6 or more players = 2 spies";
+  }
+
+  function shuffledPositions(n) {
+    var a = [];
+    var i, j, t;
+    for (i = 0; i < n; i++) a.push(i);
+    for (i = n - 1; i > 0; i--) {
+      j = Math.floor(Math.random() * (i + 1));
+      t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function startGame() {
+    var n = parseInt(playersInput.value, 10);
+    if (!n || n < 3 || n > 30) {
+      error.style.display = "block";
+      return;
+    }
+
+    error.style.display = "none";
+    total = n;
+    current = 0;
+
+    var location = locations[Math.floor(Math.random() * locations.length)];
+    roles = [];
+    for (var i = 0; i < total; i++) roles.push(location);
+
+    var spyCount = total < 6 ? 1 : 2;
+    var positions = shuffledPositions(total);
+    for (var s = 0; s < spyCount; s++) roles[positions[s]] = "SPY";
+
+    showPlayer();
+  }
+
+  function showPlayer() {
+    playerNo.textContent = String(current + 1);
+    counter.textContent = "Player " + (current + 1) + " of " + total;
+    show(player);
+  }
+
+  function revealRole() {
+    var isSpy = roles[current] === "SPY";
+    roleLabel.textContent = isSpy ? "Secret role" : "Your location";
+    roleWord.textContent = isSpy ? "YOU ARE A SPY" : roles[current];
+    roleNote.textContent = isSpy
+      ? "You do not know the location. Listen carefully and blend in."
+      : "Answer naturally without making the location too obvious.";
+    show(roleScreen);
+  }
+
+  function nextPlayer() {
+    current++;
+    if (current >= total) {
+      counter.textContent = "";
+      show(done);
+    } else {
+      showPlayer();
+    }
+  }
+
+  function advance() {
+    if (player.className.indexOf("active") !== -1) revealRole();
+    else if (roleScreen.className.indexOf("active") !== -1) nextPlayer();
+  }
+
+  document.getElementById("start").addEventListener("click", startGame, false);
+  document.getElementById("reveal").addEventListener("click", revealRole, false);
+  document.getElementById("next").addEventListener("click", nextPlayer, false);
+  document.getElementById("again").addEventListener("click", function () {
+    counter.textContent = "";
+    show(setup);
+  }, false);
+
+  playersInput.addEventListener("input", updateRule, false);
+  playersInput.addEventListener("change", updateRule, false);
+
+  swipeArea.addEventListener("touchstart", function (e) {
+    if (!e.touches || !e.touches.length) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  swipeArea.addEventListener("touchend", function (e) {
+    if (!e.changedTouches || !e.changedTouches.length) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (dx < -45 && Math.abs(dx) > Math.abs(dy) * 1.15) advance();
+  }, { passive: true });
+
+  updateRule();
+})();
+</script>
+</body>
+</html>
